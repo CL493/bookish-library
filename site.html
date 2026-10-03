@@ -18,8 +18,24 @@
 --s2: #E2D0A9;
 --s3: #B0B9A3;
 --s4: #D8C8B9;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17131c;--card:#221c2a;--tx:#f1ebf5;--mut:#a89bb0;--bd:#352c40;--ac:#a78bfa}}
-:root[data-theme="dark"]{--bg:#17131c;--card:#221c2a;--tx:#f1ebf5;--mut:#a89bb0;--bd:#352c40;--ac:#a78bfa}
+@media (prefers-color-scheme: dark) {
+:root([data-theme="light"]) {
+--bg: #241B16;
+--card: #33271F;
+--tx: #F6EDE6;
+--mut: #C0AC99;
+--bd: #594333;
+--ac: #C58D5A;
+}
+}
+{
+--bg: #241B16;
+--card: #33271F;
+--tx: #F6EDE6;
+--mut: #C0AC99;
+--bd: #594333;
+--ac: #C58D5A;
+}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 Georgia,'Times New Roman',serif}
