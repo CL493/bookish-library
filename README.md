@@ -14,10 +14,6 @@ Les informations d'un livre peuvent notamment inclure :
 * L'état de lecture
 * D'autres informations utiles pour organiser et retrouver facilement ses livres
 
-## 🛠️ Technologies
-
-* **HTML5** — Structure des pages web
-
 ## 🚀 Fonctionnalités
 
 * **📖 Gestion de la bibliothèque** : afficher et consulter sa collection de livres.
@@ -36,3 +32,13 @@ Les informations d'un livre peuvent notamment inclure :
 ## 🎯 Objectif
 
 Créer un outil personnel de gestion de bibliothèque qui facilite l'organisation de ses lectures, le suivi de sa PAL et la découverte de nouvelles lectures. My Bookish Library vise également à rendre le choix du prochain livre plus simple et ludique grâce à une roulette personnalisable.
+
+## 🛠️ Technologies
+
+* **HTML5** — Structure des pages web
+  
+## Lancement du projet
+
+--> Depuis l'explorateur de fichiers
+
+Ouvre le dossier du projet, puis double-clique sur le fichier site.html pour lancer l'application dans ton navigateur.
