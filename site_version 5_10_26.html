@@ -144,6 +144,14 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
 .srow .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .inf{font-size:12px;color:var(--mut);margin-top:6px;font-family:system-ui,sans-serif}
 .book-format{display:inline-flex;align-items:center;gap:3px;color:var(--tx);font-weight:600}
+.wishgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.wishcard{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}
+.wishhead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.wishbadge{font:11px system-ui,sans-serif;border:1px solid var(--ac);border-radius:12px;padding:3px 8px;color:var(--ac);white-space:nowrap}
+.wishprio{font:13px system-ui,sans-serif;color:var(--mut);margin:8px 0}
+.wishnote{font:14px system-ui,sans-serif;margin:8px 0;white-space:pre-wrap}
+.wishacts{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.wishacts .btn{padding:7px 10px;min-height:38px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px}
 .card h3{margin:0 0 10px;font-size:17px}
 .bar{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:14px;font-family:system-ui,sans-serif}
@@ -163,7 +171,7 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
 <div class="w">
  <div class="top"><h1>📚 Ma bibliothèque</h1>
   <div><button class="btn g" id="imp">📂 Importer</button> <button class="btn g" id="allcv">🖼️ Couvertures auto</button> <button class="btn g" id="exp">Exporter CSV</button> <button class="btn g" id="clearbooks" title="Supprimer tous les livres">🗑️ Vider la bibliothèque</button> <button class="btn" id="add">+ Ajouter</button></div></div>
- <div class="tabs"><button class="btn" id="t1">Bibliothèque</button><button class="btn" id="t2">Statistiques</button><button class="btn" id="t3">📝 Fiches de lecture</button><button class="btn" id="t4">🎡 Roulette</button><button class="btn" id="t5">🗂️ Séries</button></div>
+ <div class="tabs"><button class="btn" id="t1">Bibliothèque</button><button class="btn" id="t2">Statistiques</button><button class="btn" id="t3">📝 Fiches de lecture</button><button class="btn" id="t4">🎡 Roulette</button><button class="btn" id="t5">🗂️ Séries</button><button class="btn" id="t6">💗 Wishlist</button></div>
  <div id="lib">
   <div class="chips" id="chips"></div>
   <div class="flt"><input id="q" placeholder="Rechercher titre, auteur…" type="search">
@@ -174,6 +182,7 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
  <div id="fiches" style="display:none"></div>
  <div id="roul" style="display:none"></div>
  <div id="sers" style="display:none"></div>
+ <div id="wish" style="display:none"></div>
 <datalist id="dls"></datalist>
 <datalist id="dl_sub"></datalist>
 <datalist id="dl_themes"></datalist>
@@ -203,7 +212,7 @@ const PRESET_TROPES = [
   "Âmes sœurs", "Amour interdit", "Billionaire Romance", "Brother's Best Friend", "Cohabitation forcée", "Colocataire", "Contrats", "Duo d'enquêteurs", "Ennemis à amants", "Found Family", "Grumpy x Sunshine", "Harem inversé", "He falls first", "He falls first and harder", "Identité secrète", "Mariage arrangé", "Opposites attract", "Prophétie", "Proximité forcée", "Qui t'a fait ça ?", "Recommencement", "Right person / Wrong time", "Rivaux à amants", "Réécriture", "Slow burn", "Small Town", "The chosen one", "Touch her and you die", "Triangle amoureux", "Trouple", "Un seul lit", "Villain gets the girl"
 ];
 
-let books=[],F={q:'',st:-1,l:'',s:'',t:'',h:''},view=1,ref=null,saveT;
+let books=[],wishlist=[],F={q:'',st:-1,l:'',s:'',t:'',h:''},view=1,ref=null,saveT;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);
@@ -216,6 +225,8 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(books))}catch(e){if(
 async function init(){
  try{books=JSON.parse(localStorage.getItem(KEY))}catch(e){}
  if(!Array.isArray(books))books=SEED.map(x=>({...x}));
+ try{wishlist=JSON.parse(localStorage.getItem('wishlist'))}catch(e){}
+ if(!Array.isArray(wishlist))wishlist=[];
  render();
 }
 function cover(b){const h=HUE[b.sub[0]]!=null?HUE[b.sub[0]]:hash(b.title)%360,h2=(h+35+hash(b.title)%40)%360;
@@ -234,14 +245,14 @@ function render(){
  $('#dl_themes').innerHTML=uniq('themes').map(s=>`<option value="${esc(s)}">`).join('');
  $('#dl_tropes').innerHTML=uniq('tropes').map(s=>`<option value="${esc(s)}">`).join('');
  $('#dl_genre').innerHTML=uniq('genre').map(s=>`<option value="${esc(s)}">`).join('');
- $('#t1').className='btn'+(view==1?'':' g');$('#t2').className='btn'+(view==2?'':' g');$('#t3').className='btn'+(view==3?'':' g');$('#t4').className='btn'+(view==4?'':' g');$('#t5').className='btn'+(view==5?'':' g');
- $('#lib').style.display=view==1?'':'none';$('#stats').style.display=view==2?'':'none';$('#fiches').style.display=view==3?'':'none';$('#roul').style.display=view==4?'':'none';$('#sers').style.display=view==5?'':'none';
+ $('#t1').className='btn'+(view==1?'':' g');$('#t2').className='btn'+(view==2?'':' g');$('#t3').className='btn'+(view==3?'':' g');$('#t4').className='btn'+(view==4?'':' g');$('#t5').className='btn'+(view==5?'':' g');$('#t6').className='btn'+(view==6?'':' g');
+ $('#lib').style.display=view==1?'':'none';$('#stats').style.display=view==2?'':'none';$('#fiches').style.display=view==3?'':'none';$('#roul').style.display=view==4?'':'none';$('#sers').style.display=view==5?'':'none';$('#wish').style.display=view==6?'':'none';
  const cnt=ST.map((_,i)=>books.filter(b=>sti(b)==i).length);
  $('#chips').innerHTML=`<span class="chip${F.st<0?' on':''}" data-s="-1">Tous (${books.length})</span>`+ST.map((s,i)=>`<span class="chip${F.st==i?' on':''}" data-s="${i}"><span class="dot" style="background:${SC[i]}"></span>${s} (${cnt[i]})</span>`).join('');
  opts('#fl','Toutes langues','lang');opts('#fs','Sous-genre','sub');opts('#ft','Trope','tropes');opts('#fh','Thème','themes');
  const l=filtered();
  $('#grid').innerHTML=l.length?l.map(b=>`<div class="bk" data-id="${b.id}"><div class="cv${b.cover?' has':''}" style="${cover(b)}">${b.cover?`<img src="${esc(b.cover)}" alt="" loading="lazy" onerror="this.parentNode.classList.remove('has');this.remove()">`:''}<i class="sb" style="background:${SC[sti(b)]}"></i><span class="lg">${esc(b.lang)}</span><span class="b" style="background:${SC[sti(b)]}">${ST[sti(b)]}</span><div><div class="t">${esc(b.title)}</div></div><div class="a">${esc(b.author)}</div></div><div class="inf">${b.format?`<span class="book-format" title="${({papier:'Livre papier',ebook:'Livre numérique',audio:'Livre audio'})[b.format]||'Format du livre'}">${({papier:'📖',ebook:'📱',audio:'🎧'})[b.format]||'📚'} ${({papier:'Papier',ebook:'Ebook',audio:'Audiobook'})[b.format]||''}</span> · `:''}${b.series?'<b>'+esc(b.series)+(b.tome?' · T'+esc(b.tome):'')+'</b><br>':''}${esc((b.sub||[]).join(' · '))}${b.page?'<br>📖 '+(/^\d+$/.test(b.page)?'p. ':'')+esc(b.page):''}${has(b)?'<br>📝'+(b.fiche.rating?' '+stars(b.fiche.rating):''):''}</div></div>`).join(''):(books.length?'<div class="empty" style="grid-column:1/-1">Aucun livre ne correspond.</div>':WELCOME);
- if(view==2)stats();if(view==3)fiches();if(view==4)roulette();if(view==5)seriesPage();
+ if(view==2)stats();if(view==3)fiches();if(view==4)roulette();if(view==5)seriesPage();if(view==6)wishlistPage();
 }
 function bars(t,e,col){const m=Math.max(1,...e.map(x=>x[1]));return `<div class="card"><h3>${t}</h3>${e.map(x=>`<div class="bar"><span>${esc(x[0])}</span><i style="width:${x[1]/m*55}%;${col?'background:'+col(x[0]):''}"></i><span style="width:auto">${x[1]}</span></div>`).join('')}</div>`}
 function topN(k,n){const c={};books.forEach(b=>[].concat(b[k]).forEach(x=>c[x]=(c[x]||0)+1));return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,n)}
@@ -305,7 +316,7 @@ function openFiche(id){fb=books.find(b=>b.id==id);if(!fb)return;fs={...(fb.fiche
   <label>Genre : <input data-b="genre" list="dl_genre" value="${esc((fb.genre||[]).join(', '))}"></label>
   <label>Pages : <input data-f="pages" inputmode="numeric" value="${esc(fs.pages||'')}"></label>
   <label>Langue : <select data-b="lang">${langs.map(l=>`<option${l==fb.lang?' selected':''}>${l}</option>`).join('')}</select></label>
-  <label>Date d’achat : <input type="date" data-b="purchase" value="${esc(fb.purchase||'')}"></label><div class="two"><label>Début : <input type="date" data-b="start" value="${esc(fb.start||'')}"></label><label>Fin : <input type="date" data-b="end" value="${esc(fb.end||'')}"></label></div>${fb.start&&fb.end&&new Date(fb.end)>=new Date(fb.start)?`<small style="display:block;margin-top:4px">⏱️ Temps de lecture : ${Math.max(1,Math.round((new Date(fb.end+'T12:00')-new Date(fb.start+'T12:00'))/86400000)+1)} jour(s)</small>`:''}
+  <div class="two"><label>Début : <input type="date" data-b="start" value="${esc(fb.start||'')}"></label><label>Fin : <input type="date" data-b="end" value="${esc(fb.end||'')}"></label></div><div class="two"><label>Date d’achat : <input type="date" data-b="purchase" value="${esc(fb.purchase||'')}"></label><label>Temps de lecture : <input value="${fb.start&&fb.end&&new Date(fb.end)>=new Date(fb.start)?Math.floor((new Date(fb.end)-new Date(fb.start))/86400000)+1+' jour(s)':'—'}" readonly></label></div>
  </div></div>
  <div class="fmts">${[['papier','📖','Papier'],['liseuse','📱','Liseuse'],['audio','🎧','Audio']].map(x=>`<span class="fmt${fs.fmt.includes(x[0])?' on':''}" data-m="${x[0]}">${x[1]} ${x[2]}</span>`).join('')}</div>
  <div class="gl"><span class="rl">Ma note :</span>${rt('rating','','★','big').replace('<div class="rr"><span class="rl"></span>','<div class="rr">')}</div>
@@ -319,10 +330,26 @@ function openFiche(id){fb=books.find(b=>b.id==id);if(!fb)return;fs={...(fb.fiche
 function fiches(){const l=books.filter(has).sort((a,b)=>a.title.localeCompare(b.title,'fr'));
  $('#fiches').innerHTML=`<div class="card"><h3>Écrire ou modifier une fiche</h3><select id="fpick"><option value="">Choisir un livre…</option>`+[...books].sort((a,b)=>a.title.localeCompare(b.title,'fr')).map(b=>`<option value="${b.id}">${esc(b.title)} — ${esc(b.author)}${has(b)?' 📝':''}</option>`).join('')+`</select></div>`
  +(l.length?`<div class="fgrid">`+l.map(b=>{const f=b.fiche;return `<div class="card fc" data-fid="${b.id}"><div class="fcc" style="${cover(b)}">${b.cover?`<img src="${esc(b.cover)}" alt="" onerror="this.remove()">`:''}</div><div style="min-width:0"><b>${esc(b.title)}</b><div class="inf" style="margin:0">${esc(b.author)}</div>${f.rating||f.reco?`<div style="color:#f5a623">${f.rating?stars(f.rating):''}${f.reco=='oui'?' 👍':f.reco=='non'?' 👎':''}</div>`:''}<p class="ex">${esc((f.avis||f.resume||f.cit||'').slice(0,160))}</p></div></div>`}).join('')+`</div>`:`<div class="empty">Aucune fiche pour l'instant. Choisis un livre ci-dessus pour écrire la première.</div>`)}
+
+/* ---------- WISHLIST ---------- */
+const WTYPE=['Envie de lecture','Envie d’achat'];
+const WPRIO=['Basse','Moyenne','Haute'];
+let wc=null;
+function saveWish(){try{localStorage.setItem('wishlist',JSON.stringify(wishlist))}catch(e){}}
+function wishlistPage(){
+ const q=(($('#wq')&&$('#wq').value)||'').toLowerCase(); const type=(($('#wt')&&$('#wt').value)||''); const prio=(($('#wp')&&$('#wp').value)||'');
+ const l=wishlist.filter(w=>(!type||w.type==type)&&(!prio||w.priority==prio)&&(!q||(w.title+' '+(w.author||'')+' '+(w.note||'')).toLowerCase().includes(q))).sort((a,b)=>WPRIO.indexOf(b.priority)-WPRIO.indexOf(a.priority)||a.title.localeCompare(b.title,'fr'));
+ $('#wish').innerHTML=`<div class="card"><div class="top"><div><h2 style="margin:0">💗 Wishlist</h2><p style="margin:4px 0;color:var(--mut);font-family:system-ui,sans-serif">Tes envies d’achat et de lecture, séparées de ta bibliothèque.</p></div><button class="btn" id="wadd">+ Ajouter une envie</button></div><div class="flt" style="margin-top:14px"><input id="wq" placeholder="Rechercher un titre, auteur…" value="${esc(q)}" type="search"><select id="wt"><option value="">Tous les types</option>${WTYPE.map(x=>`<option${x==type?' selected':''}>${x}</option>`).join('')}</select><select id="wp"><option value="">Toutes les priorités</option>${WPRIO.map(x=>`<option${x==prio?' selected':''}>${x}</option>`).join('')}</select></div></div>${l.length?`<div class="wishgrid">${l.map(w=>`<div class="wishcard"><div class="wishhead"><div><h3 style="margin:0 0 3px">${esc(w.title)}</h3><div class="inf" style="margin:0">${esc(w.author||'Auteur non renseigné')}</div></div><span class="wishbadge">${esc(w.type)}</span></div><div class="wishprio">⭐ Priorité : <b>${esc(w.priority)}</b>${w.added?` · ${fd(w.added)}`:''}</div>${w.note?`<div class="wishnote">${esc(w.note)}</div>`:''}${w.url?`<div><a href="${esc(w.url)}" target="_blank" rel="noopener" style="color:var(--ac)">🔗 Lien</a></div>`:''}<div class="wishacts"><button class="btn g" data-wedit="${w.id}">Modifier</button><button class="btn" data-wlib="${w.id}">📚 Ajouter à la bibliothèque</button><button class="btn d" data-wdel="${w.id}">Supprimer</button></div></div>`).join('')}</div>`:`<div class="empty">Aucune envie ne correspond à tes filtres.<br><button class="btn" id="wadd2" style="margin-top:12px">+ Ajouter une envie</button></div>`}`;
+}
+function openWish(id){wc=id?wishlist.find(w=>w.id==id):null;const w=wc||{type:'Envie de lecture',priority:'Moyenne',title:'',author:'',note:'',url:''};
+ $('#box').classList.remove('wide');$('#box').innerHTML=`<h2 style="margin-top:0">${wc?'Modifier une envie':'Ajouter une envie'}</h2><div class="f"><div class="full"><label>Titre</label><input data-w="title" value="${esc(w.title)}"></div><div><label>Auteur</label><input data-w="author" value="${esc(w.author||'')}"></div><div><label>Type</label><select data-w="type">${WTYPE.map(x=>`<option${x==w.type?' selected':''}>${x}</option>`).join('')}</select></div><div><label>Priorité</label><select data-w="priority">${WPRIO.map(x=>`<option${x==w.priority?' selected':''}>${x}</option>`).join('')}</select></div><div><label>Lien (optionnel)</label><input data-w="url" type="url" value="${esc(w.url||'')}" placeholder="https://…"></div><div class="full"><label>Note / pourquoi je le veux (optionnel)</label><textarea data-w="note" rows="4">${esc(w.note||'')}</textarea></div></div><div class="acts"><button class="btn" id="wok">Enregistrer</button><button class="btn g" id="no">Annuler</button><span class="sp"></span>${wc?'<button class="btn d" id="wdel">Supprimer</button>':''}</div>`;$('#mod').classList.add('on')}
+function commitWish(){const o={};$('#box').querySelectorAll('[data-w]').forEach(e=>o[e.dataset.w]=e.value.trim());if(!o.title)return;if(wc)Object.assign(wc,o);else wishlist.push({id:Date.now(),added:new Date().toISOString().slice(0,10),...o});saveWish();closeMod();render()}
+function wishToBook(id){const w=wishlist.find(x=>x.id==id);if(!w)return;closeMod();view=1;openBook(null,{title:w.title,author:w.author||'',state:'À lire',lang:'FR',genre:['Fantasy'],sub:[],themes:[],tropes:[]})}
+
 /* ---------- IMPORT EXCEL / CSV ---------- */
 const nh=s=>String(s==null?'':s).replace(/\(.*?\)/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-const HDR={format:['format','support','type de livre','format du livre','medium'],purchase:['date achat','date d achat','achat','purchase date','purchase'],title:['titre','title','nom du livre'],author:['auteur','author','autrice'],series:['serie','series','saga','cycle'],tome:['tome','n tome','n du tome','n de tome','numero de tome','volume','tome n'],stotal:['nombre de tomes','nb de tomes','tomes dans la serie','tomes total','total tomes','stotal'],lang:['langue','lang','language'],state:['etat','statut','status','state'],start:['debut','date de debut','start','commence le'],end:['fin','date de fin','end','finish','termine le'],genre:['genre','genres'],sub:['sous genre','sous genres','sub','subgenre'],themes:['theme','themes','thematique'],tropes:['trope','tropes'],page:['numero de page','page','progression','n de page']};
-const HEADS=['Langue','Titre','Auteur','Date d’achat','Série','Tome','Nombre de tomes','État','Format','Début','Fin','Genre','Sous-genre','Thèmes','Tropes','Numéro de page'];
+const HDR={title:['titre','title','nom du livre'],author:['auteur','author','autrice'],series:['serie','series','saga','cycle'],tome:['tome','n tome','n du tome','n de tome','numero de tome','volume','tome n'],stotal:['nombre de tomes','nb de tomes','tomes dans la serie','tomes total','total tomes','stotal'],lang:['langue','lang','language'],state:['etat','statut','status','state'],start:['debut','date de debut','start','commence le'],end:['fin','date de fin','end','finish','termine le'],purchase:['date d achat','date achat','achat','purchase'],genre:['genre','genres'],sub:['sous genre','sous genres','sub','subgenre'],themes:['theme','themes','thematique'],tropes:['trope','tropes'],page:['numero de page','page','progression','n de page']};
+const HEADS=['Langue','Titre','Auteur','Série','Tome','Nombre de tomes','État','Début','Fin','Date d’achat','Genre','Sous-genre','Thèmes','Tropes','Numéro de page'];
 const RATEK=['rating','ecr','int','per','fac','tri','rom','hum','fin'];
 let IMP=null;
 function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,ko)=>{const add=src=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>src.startsWith('http')?ko(new Error('bibliothèque Excel introuvable (vérifie ta connexion)')):add('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');document.head.appendChild(s)};add('xlsx.full.min.js')})}
@@ -341,7 +368,7 @@ function rowsToBooks(rows){const list=[];let skipped=0;
  for(const r of rows){const m={};for(const k in r)m[nh(k)]=r[k];
   const get=(al,loose=true)=>{for(const a of al)if(m[a]!==undefined&&m[a]!=='')return m[a];if(loose)for(const k in m)if(m[k]!==''&&al.some(a=>k.startsWith(a+' ')))return m[k];return ''};
   const title=String(get(HDR.title)).trim();if(!title){if(Object.values(r).some(x=>x!==''))skipped++;continue}
-  const b={id:0,lang:normLang(get(HDR.lang)),title,author:String(get(HDR.author)).trim(),purchase:toISO(get(HDR.purchase)),series:String(get(HDR.series)).trim(),tome:String(get(HDR.tome)).trim(),stotal:parseInt(get(HDR.stotal))||'',state:normState(get(HDR.state)),format:(()=>{const f=nh(get(HDR.format));return /audio|audiobook|livre audio/.test(f)?'audio':/ebook|e book|numerique|liseuse|digital/.test(f)?'ebook':/papier|physical|physique|broche|poche/.test(f)?'papier':''})(),start:toISO(get(HDR.start)),end:toISO(get(HDR.end)),genre:spl(get(HDR.genre)),sub:spl(get(HDR.sub)),themes:spl(get(HDR.themes)),tropes:spl(get(HDR.tropes)),page:String(get(HDR.page)).trim()};
+  const b={id:0,lang:normLang(get(HDR.lang)),title,author:String(get(HDR.author)).trim(),series:String(get(HDR.series)).trim(),tome:String(get(HDR.tome)).trim(),stotal:parseInt(get(HDR.stotal))||'',state:normState(get(HDR.state)),start:toISO(get(HDR.start)),end:toISO(get(HDR.end)),purchase:toISO(get(HDR.purchase)),genre:spl(get(HDR.genre)),sub:spl(get(HDR.sub)),themes:spl(get(HDR.themes)),tropes:spl(get(HDR.tropes)),page:String(get(HDR.page)).trim()};
   const f={};for(const k in FX){const v=get([k],false);if(v==='')continue;const fk=FX[k];
    if(RATEK.includes(fk))f[fk]=Math.max(0,Math.min(5,Math.round(+String(v).replace(',','.'))||0));
    else if(fk=='fmt')f.fmt=spl(v).map(nh).filter(x=>['papier','liseuse','audio'].includes(x));
@@ -354,12 +381,12 @@ function rowsToBooks(rows){const list=[];let skipped=0;
 const bkey=b=>(b.title+'|'+b.author).toLowerCase().trim();
 const isDup=b=>books.some(x=>bkey(x)==bkey(b));
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
-async function tpl(){try{await loadXLSX();const ws=XLSX.utils.aoa_to_sheet([HEADS,['FR','Mon premier livre','Prénom Nom','','Ma série','1','3','À lire','','','','Fantasy','Romantasy','Magie, Amitié','Slow Burn, Enemies to Lovers','']]);
+async function tpl(){try{await loadXLSX();const ws=XLSX.utils.aoa_to_sheet([HEADS,['FR','Mon premier livre','Prénom Nom','Ma série','1','3','À lire','','','','Fantasy','Romantasy','Magie, Amitié','Slow Burn, Enemies to Lovers','']]);
  ws['!cols']=HEADS.map(()=>({wch:20}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Livres');
  dl(new Blob([XLSX.write(wb,{type:'array',bookType:'xlsx'})],{type:'application/octet-stream'}),'modele-bibliotheque.xlsx')}catch(e){alert('Modèle indisponible : '+e.message)}}
 function impDialog(){IMP=null;$('#box').classList.remove('wide');
  $('#box').innerHTML=`<h2 style="margin-top:0">📂 Importer des livres</h2>
- <p style="margin:0 0 8px;font-family:system-ui,sans-serif;font-size:15px">Choisis un fichier <b>Excel (.xlsx)</b> ou <b>CSV</b>. La première ligne doit contenir les noms de colonnes. Je reconnais : <i>Titre, Auteur, Série, Tome, Nombre de tomes, Langue, État, Début, Fin, Genre, Sous-genre, Thèmes, Tropes, Numéro de page</i>.</p>
+ <p style="margin:0 0 8px;font-family:system-ui,sans-serif;font-size:15px">Choisis un fichier <b>Excel (.xlsx)</b> ou <b>CSV</b>. La première ligne doit contenir les noms de colonnes. Je reconnais : <i>Titre, Auteur, Série, Tome, Nombre de tomes, Langue, État, Début, Fin, Date d’achat, Genre, Sous-genre, Thèmes, Tropes, Numéro de page</i>.</p>
  <p style="margin:0 0 14px;color:var(--mut);font-family:system-ui,sans-serif;font-size:14px">Plusieurs valeurs dans une case (genres, thèmes, tropes) : sépare-les par des virgules. États : À lire, En cours, Mis en pause, Terminé, Abandonné.</p>
  <div class="acts" style="margin-top:0"><label class="btn" for="impfile">📂 Choisir un fichier</label><input type="file" id="impfile" accept=".xlsx,.xls,.csv,.txt" hidden><button class="btn g" id="imptpl">⬇ Modèle Excel</button><button class="btn g" id="no">Annuler</button></div><div id="impres" style="margin-top:14px;font-family:system-ui,sans-serif"></div>`;
  $('#mod').classList.add('on')}
@@ -375,7 +402,7 @@ function impDo(replace){if(!IMP)return;let n=0;
  save();closeMod();F.st=-1;render();alert(n+' livre(s) importé(s).')}
 
 /* ---------- ROULETTE ---------- */
-const PAL=['#E2D0A9','#D9A87C','#D8C8B9','#B0B9A3','#EFE0C5','#C9A27E','#E8D5BF','#CDBA97'];
+const PAL=['#f9a8c9','#c4b5fd','#fde68a','#a7f3d0','#bae6fd','#fdba74','#f5b5d8','#d9f99d'];
 const CATS=[['genre','Genres'],['sub','Sous-genres'],['themes','Thèmes'],['tropes','Tropes']];
 const CATL={genre:'Genre',sub:'Sous-genre',themes:'Thème',tropes:'Trope'};
 const RO={crit:[],pick:null,q:'',incl:false,ex:[],rid:null,rot:0,spinning:false,exc:true,init:false,vl:[]};
@@ -405,7 +432,7 @@ function wheelSVG(c){const n=c.length,R=200,seg=360/n;
    let shape;if(n==1)shape=`<circle r="${R}" fill="${col}" class="seg${win}" data-id="${b.id}"/>`;
    else{const p0=pt(a0,R),p1=pt(a0+seg,R);shape=`<path d="M0 0L${p0[0]} ${p0[1]}A${R} ${R} 0 ${seg>180?1:0} 1 ${p1[0]} ${p1[1]}Z" fill="${col}" class="seg${win}" data-id="${b.id}"/>`}
    const s=short(b),t=s.length>mx?s.slice(0,mx-1)+'…':s;
-   g+=shape+(fs?`<text transform="rotate(${m-90}) translate(${R-16},0)" text-anchor="end" dominant-baseline="central" font-size="${fs}" fill="#3a2517">${esc(t)}</text>`:'')})}
+   g+=shape+(fs?`<text transform="rotate(${m-90}) translate(${R-16},0)" text-anchor="end" dominant-baseline="central" font-size="${fs}" fill="#2a2230">${esc(t)}</text>`:'')})}
  return `<svg viewBox="-232 -248 464 480" class="wsvg" role="img" aria-label="Roulette de lecture"><circle r="214" fill="var(--ac)"/><circle r="206" fill="#fff"/><g id="wh" transform="rotate(${RO.rot})">${g}</g><circle r="36" fill="#fffdf8" stroke="#3a2517" stroke-width="4"/><text y="11" text-anchor="middle" font-size="30">📚</text><polygon id="ptr" points="-18,-246 18,-246 0,-192" fill="var(--ac)" stroke="#3a2517" stroke-width="4" stroke-linejoin="round"/></svg>`}
 function roResult(c){
  const b=!RO.spinning&&RO.rid&&books.find(x=>x.id==RO.rid);if(!b)return '';
@@ -497,9 +524,14 @@ document.addEventListener('click',async e=>{
  else if(t.closest('.bk'))openBook(t.closest('.bk').dataset.id);
  else if(t.id=='add')openBook();
  else if(t.id=='ok')commit();
+ else if(t.id=='wadd'||t.id=='wadd2')openWish();
+ else if(t.id=='wok')commitWish();
+ else if(t.id=='wdel'){wishlist=wishlist.filter(w=>w!==wc);saveWish();closeMod();render()}
+ else if(t.closest('[data-wedit]'))openWish(t.closest('[data-wedit]').dataset.wedit);
+ else if(t.closest('[data-wdel]')){wishlist=wishlist.filter(w=>w.id!=t.closest('[data-wdel]').dataset.wdel);saveWish();render()}
+ else if(t.closest('[data-wlib]'))wishToBook(t.closest('[data-wlib]').dataset.wlib);
  else if(t.id=='no'||t.id=='mod')closeMod();
  else if(t.id=='del'){if(!delArm){delArm=true;t.textContent='Confirmer ?'}else{books=books.filter(b=>b!==cur);save();closeMod();render()}}
- else if(t.id=='allcv')allCovers(t);
  else if(t.id=='clearbooks'){
   if(!books.length){alert('Ta bibliothèque est déjà vide.');return}
   if(confirm(`Supprimer définitivement les ${books.length} livres de ta bibliothèque ?\n\nCette action ne peut pas être annulée. Pense à exporter un CSV si tu souhaites conserver une copie.`)){
@@ -507,6 +539,7 @@ document.addEventListener('click',async e=>{
    save();render();alert('Ta bibliothèque a été vidée. Tu peux recommencer depuis le début.');
   }
  }
+ else if(t.id=='allcv')allCovers(t);
  else if(t.id=='cvrm'){cc='';prev()}
  else if(t.id=='cvauto'){const ti=$('[data-k=title]').value,au=$('[data-k=author]').value;t.textContent='Recherche…';
   const u=await findCover({title:ti,author:au});if(u){cc=u;prev();t.textContent='🔍 Chercher automatiquement'}else t.textContent='Introuvable : ajoute une photo'}
@@ -539,6 +572,7 @@ document.addEventListener('click',async e=>{
  else if(t.closest('.rrm')){RO.crit.splice(+t.closest('.rrm').dataset.rm,1);RO.rid=null;roulette()}
  else if(t.id=='t4'){view=4;if(!RO.init){RO.init=true;RO.pick={i:-1,cat:'genre'}}render()}
  else if(t.id=='t5'){view=5;render()}
+ else if(t.id=='t6'){view=6;render()}
  else if(t.closest('.sfc')){SV.f=t.closest('.sfc').dataset.f;render()}
  else if(t.closest('.tm[data-id],.srow')){openBook(t.closest('[data-id]').dataset.id)}
  else if(t.closest('[data-sadd]')){const g=seriesList().find(x=>x.key==t.closest('[data-sadd]').dataset.sadd);
@@ -548,15 +582,15 @@ document.addEventListener('click',async e=>{
  else if(t.closest('.sr')){const k=t.closest('.sr').dataset.sk;SV.open[k]=!SV.open[k];seriesPage()}
  else if(t.id=='t1'){view=1;render()}else if(t.id=='t2'){view=2;render()}
  else if(t.id=='exp'){
-  const H=['title','author','series','tome','stotal','lang','state','format','time','start','end','genre','sub','themes','tropes','page',...Object.keys(FX)];
+  const H=['title','author','series','tome','stotal','lang','state','start','end','purchase','genre','sub','themes','tropes','page',...Object.keys(FX)];
   const g=(b,k)=>k in FX?(b.fiche||{})[FX[k]]:b[k];
   const q=v=>'"'+String(Array.isArray(v)?v.join(', '):v||'').replace(/"/g,'""')+'"';
   const csv='\ufeff'+H.join(',')+'\n'+books.map(b=>H.map(k=>q(g(b,k))).join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='ma-bibliotheque.csv';a.click()}
 });
-document.addEventListener('input',e=>{if(e.target.id=='sq'){SV.q=e.target.value;$('#sgrid').innerHTML=sgridHTML()}
+document.addEventListener('input',e=>{if(e.target.id=='wq'){wishlistPage();return} if(e.target.id=='sq'){SV.q=e.target.value;$('#sgrid').innerHTML=sgridHTML()}
  if(e.target.id=='roq'){RO.q=e.target.value;$('#rvals').innerHTML=roVals()}});
-document.addEventListener('change',async e=>{if(e.target.dataset&&e.target.dataset.tot!==undefined){const n=parseInt(e.target.value)||'';books.forEach(b=>{if(b.series&&skey(b.series)==e.target.dataset.tot)b.stotal=n});save();render();return}
+document.addEventListener('change',async e=>{if(e.target.id=='wt'||e.target.id=='wp'){wishlistPage();return} if(e.target.dataset&&e.target.dataset.tot!==undefined){const n=parseInt(e.target.value)||'';books.forEach(b=>{if(b.series&&skey(b.series)==e.target.dataset.tot)b.stotal=n});save();render();return}
  if(e.target.id=='impfile'&&e.target.files[0]){impFile(e.target.files[0]);return}
  if(e.target.id=='roinc'){RO.incl=e.target.checked;RO.rid=null;roulette();return}
  if(e.target.id=='roexc'){RO.exc=e.target.checked;return}
